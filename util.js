@@ -90,7 +90,7 @@ function getIntegrityChecksumForAsset(assets, src) {
   }
   normalizedSrc = normalizePath(src);
   normalizedKey = Object.keys(assets).find(function test(assetKey) {
-    return normalizePath(assetKey) === normalizedSrc;
+    return normalizedSrc.includes(normalizePath(assetKey))
   });
   if (normalizedKey) {
     return assets[normalizedKey].integrity;
