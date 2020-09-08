@@ -335,6 +335,11 @@ SubresourceIntegrityPlugin.prototype.registerHwpHooks =
           callback(null, data);
         }
       );
+    } else if (hwpCompilation.hooks.htmlWebpackPluginAlterAssetTags &&
+               hwpCompilation.hooks.htmlWebpackPluginBeforeHtmlGeneration) {
+      // HtmlWebpackPlugin 3
+      hwpCompilation.hooks.htmlWebpackPluginAlterAssetTags.tapAsync('SriPlugin', alterAssetTags);
+      hwpCompilation.hooks.htmlWebpackPluginBeforeHtmlGeneration.tapAsync('SriPlugin', beforeHtmlGeneration);
     }
   };
 
@@ -361,9 +366,16 @@ SubresourceIntegrityPlugin.prototype.thisCompilation =
      *  html-webpack support:
      *    Modify the asset tags before webpack injects them for anything with an integrity value.
      */
-    compilation.hooks.afterOptimizeAssets.tap('SriPlugin', afterOptimizeAssets);
-    compilation.hooks.beforeChunkAssets.tap('SriPlugin', beforeChunkAssets);
-    compiler.hooks.compilation.tap('HtmlWebpackPluginHooks', this.registerHwpHooks.bind(this, alterAssetTags, beforeHtmlGeneration));
+    if (compiler.hooks) {
+      compilation.hooks.afterOptimizeAssets.tap('SriPlugin', afterOptimizeAssets);
+      compilation.hooks.beforeChunkAssets.tap('SriPlugin', beforeChunkAssets);
+      compiler.hooks.compilation.tap('HtmlWebpackPluginHooks', this.registerHwpHooks.bind(this, alterAssetTags, beforeHtmlGeneration));
+    } else {
+      compilation.plugin('after-optimize-assets', afterOptimizeAssets);
+      compilation.plugin('before-chunk-assets', beforeChunkAssets);
+      compilation.plugin('html-webpack-plugin-alter-asset-tags', alterAssetTags);
+      compilation.plugin('html-webpack-plugin-before-html-generation', beforeHtmlGeneration);
+    }
   };
 
 SubresourceIntegrityPlugin.prototype.beforeChunkAssets = function afterPlugins(compilation) {
@@ -376,7 +388,11 @@ SubresourceIntegrityPlugin.prototype.beforeChunkAssets = function afterPlugins(c
 };
 
 SubresourceIntegrityPlugin.prototype.afterPlugins = function afterPlugins(compiler) {
-  compiler.hooks.thisCompilation.tap('SriPlugin', this.thisCompilation.bind(this, compiler));
+  if (compiler.hooks) {
+    compiler.hooks.thisCompilation.tap('SriPlugin', this.thisCompilation.bind(this, compiler));
+  } else {
+    compiler.plugin('this-compilation', this.thisCompilation.bind(this, compiler));
+  }
 };
 
 SubresourceIntegrityPlugin.prototype.apply = function apply(compiler) {
@@ -388,7 +404,11 @@ SubresourceIntegrityPlugin.prototype.apply = function apply(compiler) {
     return
   }
 
-  compiler.hooks.afterPlugins.tap('SriPlugin', this.afterPlugins.bind(this));
+  if (compiler.hooks) {
+    compiler.hooks.afterPlugins.tap('SriPlugin', this.afterPlugins.bind(this));
+  } else {
+    compiler.plugin('after-plugins', this.afterPlugins.bind(this));
+  }
 };
 
 module.exports = SubresourceIntegrityPlugin;
